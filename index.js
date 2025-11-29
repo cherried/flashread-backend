@@ -1,3 +1,21 @@
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import OpenAI from "openai";
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Optional healthcheck
+app.get("/", (req, res) => {
+  res.send("FlashRead backend is running");
+});
+
 app.post("/summarize", async (req, res) => {
   try {
     const {
@@ -11,20 +29,22 @@ app.post("/summarize", async (req, res) => {
     }
 
     const cleanedText = text.trim();
-    const originalWordCount = cleanedText.split(/\s+/).filter(Boolean).length;
+    const originalWordCount = cleanedText
+      .split(/\s+/)
+      .filter(Boolean).length;
 
-    // length hint
+    // Length hint for the model
     let targetLength;
     if (lengthSetting === "Short") targetLength = "1–3 key points";
     else if (lengthSetting === "Detailed") targetLength = "7–10 key points";
     else targetLength = "4–6 key points";
 
-    // format instructions
+    // Formatting instructions
     const bulletInstruction = `
 - Format the summary strictly as bullet points.
 - Each bullet MUST start with "• " (bullet + space).
 - Put each bullet on its own line.
-- Do NOT add any paragraphs or prose outside the bullets.
+- Do NOT add paragraphs or prose outside the bullets.
 `;
 
     const paragraphInstruction = `
@@ -41,7 +61,7 @@ Summarize the following text.
 
 Requirements:
 - Be neutral, factual, and concise.
-- Focus only on the core ideas and important details.
+- Focus only on core ideas and important details.
 - Aim for ${targetLength}.
 ${formatInstruction}
 
@@ -67,7 +87,9 @@ Text to summarize:
       temperature: 0.2,
     });
 
-    const summaryText = (completion.choices[0].message.content || "").trim();
+    const summaryText =
+      (completion.choices[0].message.content || "").trim();
+
     const summaryWordCount = summaryText
       .split(/\s+/)
       .filter(Boolean).length;
@@ -76,8 +98,8 @@ Text to summarize:
       summaryText,
       originalWordCount,
       summaryWordCount,
-      formatSetting,    // optional, handy for debugging
-      lengthSetting,    // optional
+      lengthSetting,
+      formatSetting,
     });
   } catch (err) {
     console.error("Summarization error:", err);
@@ -85,4 +107,8 @@ Text to summarize:
   }
 });
 
-app.listen(PORT, () => console.log(`FlashRead backend running on port ${PORT}`));
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`FlashRead backend running on port ${PORT}`);
+});
+
